@@ -1,0 +1,21 @@
+{
+  "name": "Control de Tarjetas",
+  "short_name": "Tarjetas",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#141e30",
+  "theme_color": "#141e30",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/633/633611.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/633/633611.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

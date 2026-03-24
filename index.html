@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#141e30">
+<title>App Control de Tarjetas</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family: Arial;
+    background: linear-gradient(135deg, #141e30, #243b55);
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+
+input, button {
+    padding: 8px;
+    margin: 5px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    background: #00c6ff;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.card {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 15px;
+    width: 360px;
+}
+
+.days {
+    display: grid;
+    grid-template-columns: repeat(7,1fr);
+    gap: 4px;
+}
+
+.day-btn {
+    padding: 5px;
+    background: #eee;
+    color: black;
+    border-radius: 5px;
+    font-size: 11px;
+}
+
+.cut-day { background: red !important; color: white; }
+.today { background: green !important; color: white; }
+.disabled { background: gray !important; color: white; }
+
+.history {
+    max-height: 120px;
+    overflow-y: auto;
+    text-align: left;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.total {
+    margin-top: 8px;
+    font-weight: bold;
+}
+
+.actions button {
+    background: #ff9800;
+}
+
+.delete-btn {
+    background: #e53935 !important;
+    color: white;
+}
+</style>
+</head>
+<body>
+
+<h1>💳 App de Tarjetas</h1>
+
+<input id="cardName" placeholder="Nombre tarjeta">
+<input id="cutDay" type="number" placeholder="Corte">
+<button onclick="addCard()">Agregar</button>
+
+<div class="cards" id="cards"></div>
+
+<script>
+let cards = JSON.parse(localStorage.getItem("cards")) || [];
+
+function save() {
+    localStorage.setItem("cards", JSON.stringify(cards));
+}
+
+function addCard() {
+    const nameInput = document.getElementById("cardName");
+    const cutDayInput = document.getElementById("cutDay");
+
+    const name = nameInput.value;
+    const cutDay = parseInt(cutDayInput.value);
+
+    if (!name || !cutDay) return alert("Completa campos");
+
+    cards.push({
+        name,
+        cutDay,
+        blocked: false,
+        history: []
+    });
+
+    nameInput.value = "";
+    cutDayInput.value = "";
+
+    save();
+    render();
+}
+
+function render() {
+    const container = document.getElementById("cards");
+    container.innerHTML = "";
+    const today = new Date().getDate();
+
+    cards.forEach((card, i) => {
+
+        let total = card.history.reduce((sum, h) => sum + parseFloat(h.amount), 0);
+
+        let daysHTML = "";
+        for (let d = 1; d <= 31; d++) {
+            let cls = "day-btn";
+            if (d === card.cutDay) cls += " cut-day";
+            if (d === today) cls += " today";
+            if (card.blocked && d !== card.cutDay) cls += " disabled";
+
+            daysHTML += `<button class="${cls}" onclick="addPurchase(${i})">${d}</button>`;
+        }
+
+        let historyHTML = card.history.map((h, index) =>
+            `<div>
+                📅 ${h.date} - $${h.amount}<br>
+                ${h.desc}
+                <button onclick="deletePurchase(${i}, ${index})">❌</button>
+            </div>`
+        ).join("");
+
+        let diff = card.cutDay - today;
+        if (diff < 0) diff += 30;
+        let alert = diff <= 3 ? `⚠️ Corte en ${diff} día(s)` : "";
+
+        const div = document.createElement("div");
+        div.className = "card";
+
+        div.innerHTML = `
+            <h3>${card.name}</h3>
+            <p>Corte: ${card.cutDay}</p>
+
+            <div class="days">${daysHTML}</div>
+
+            <div>${card.blocked ? "🔒 Bloqueada" : "✅ Activa"}</div>
+            <div style="color:yellow">${alert}</div>
+
+            <div class="total">Total: $${total.toFixed(2)}</div>
+
+            <div class="actions">
+                <button onclick="editCard(${i})">✏️ Editar</button>
+                <button onclick="resetCard(${i})">🔄 Reset</button>
+                <button class="delete-btn" onclick="deleteCard(${i})">🗑️ Eliminar</button>
+            </div>
+
+            <div class="history">${historyHTML || "Sin compras"}</div>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+function addPurchase(i) {
+    const card = cards[i];
+    const today = new Date().getDate();
+
+    if (today === card.cutDay) card.blocked = false;
+
+    if (card.blocked) return alert("Tarjeta bloqueada");
+
+    let amount = prompt("Monto:");
+    let desc = prompt("Descripción:");
+
+    if (!amount || !desc) return;
+
+    card.history.unshift({
+        amount,
+        desc,
+        date: new Date().toLocaleDateString()
+    });
+
+    card.blocked = true;
+
+    save();
+    render();
+}
+
+function deletePurchase(cardIndex, purchaseIndex) {
+    cards[cardIndex].history.splice(purchaseIndex, 1);
+    save();
+    render();
+}
+
+function editCard(i) {
+    let newName = prompt("Nuevo nombre:", cards[i].name);
+    let newCut = prompt("Nueva fecha de corte:", cards[i].cutDay);
+
+    if (!newName || !newCut) return;
+
+    cards[i].name = newName;
+    cards[i].cutDay = parseInt(newCut);
+
+    save();
+    render();
+}
+
+function deleteCard(i) {
+    if (!confirm("¿Eliminar tarjeta?")) return;
+
+    cards.splice(i, 1);
+    save();
+    render();
+}
+
+function resetCard(i) {
+    if (!confirm("¿Resetear periodo?")) return;
+
+    cards[i].history = [];
+    cards[i].blocked = false;
+
+    save();
+    render();
+}
+
+render();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+}
+</script>
+</body>
+</html>
