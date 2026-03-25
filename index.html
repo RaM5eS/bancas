@@ -3,10 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#141e30">
 <title>App Control de Tarjetas</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
@@ -15,290 +12,367 @@ body {
     color: white;
     text-align: center;
     padding: 10px;
-    margin: 0;
 }
 
-/* Inputs responsive */
-.top-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 15px;
-}
+h2 { margin-top: 25px; }
 
 input, button {
-    padding: 12px;
+    padding: 10px;
     border-radius: 10px;
     border: none;
-    font-size: 14px;
-}
-
-input {
-    flex: 1;
-    min-width: 120px;
 }
 
 button {
     background: #00c6ff;
     cursor: pointer;
-    font-weight: bold;
-}
-
-/* Cards */
-.cards {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    align-items: center;
 }
 
 .card {
     background: rgba(255,255,255,0.1);
     padding: 15px;
     border-radius: 15px;
-    width: 100%;
+    margin: 10px auto;
     max-width: 420px;
 }
 
-/* Días */
-.days {
+.logo-box {
+    width: 100px;
+    height: 100px;
+    margin: 10px auto;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.weekdays, .days {
     display: grid;
     grid-template-columns: repeat(7,1fr);
-    gap: 5px;
-    margin-top: 10px;
 }
 
 .day-btn {
-    padding: 10px 0;
+    padding: 10px;
     background: #eee;
     color: black;
+    margin: 2px;
     border-radius: 6px;
-    font-size: 12px;
 }
 
-.cut-day { background: red !important; color: white; }
-.today { background: green !important; color: white; }
-.disabled { background: gray !important; color: white; }
+.cut-day { background: green !important; color:white; }
+.today-blue { background: blue !important; color:white; }
+.due-day { background: red !important; color:white; }
 
-/* Historial */
-.history {
-    max-height: 150px;
-    overflow-y: auto;
-    text-align: left;
-    font-size: 13px;
+.purchase-1 { background:#fff176 !important; }
+.purchase-2 { background:#ffb74d !important; }
+.purchase-3 { background:#f57c00 !important; color:white;}
+
+.empty { visibility:hidden; }
+
+.total-box {
+    background: rgba(0,0,0,0.3);
+    padding: 10px;
     margin-top: 10px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
 }
 
-.total {
+.status-line {
     margin-top: 10px;
     font-weight: bold;
 }
 
-/* Botones acciones */
-.actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    justify-content: center;
-    margin-top: 10px;
-}
+.limit-ok { color: #00e676; }
+.limit-bad { color: #ff5252; }
 
-.actions button {
-    flex: 1;
-    min-width: 90px;
-    background: #ff9800;
-}
-
-.delete-btn {
-    background: #e53935 !important;
-    color: white;
-}
-
-/* Ajustes extra para pantallas muy pequeñas */
-@media (max-width: 400px) {
-    .day-btn {
-        font-size: 10px;
-        padding: 8px 0;
-    }
-
-    h1 {
-        font-size: 20px;
-    }
+#cards {
+    transition: 0.3s;
 }
 </style>
 </head>
 
 <body>
 
-<h1>💳 App de Tarjetas</h1>
+<h1>💳 Control de Tarjetas</h1>
 
-<div class="top-controls">
-    <input id="cardName" placeholder="Nombre tarjeta">
-    <input id="cutDay" type="number" placeholder="Corte">
-    <button onclick="addCard()">Agregar</button>
+<input id="cardName" placeholder="Agregar tarjeta">
+<input id="cutDay" type="number" placeholder="Agregar fecha de corte">
+<button onclick="addCard()">Agregar</button>
+
+<!-- 📅 CALENDARIO GLOBAL -->
+<div style="margin:15px;">
+    <button onclick="changeMonth(-1)">⬅️</button>
+    <span id="monthLabel" style="margin:0 10px; font-weight:bold;"></span>
+    <button onclick="changeMonth(1)">➡️</button>
 </div>
 
-<div class="cards" id="cards"></div>
+<div id="cards"></div>
 
-<!-- TU JS SE QUEDA EXACTAMENTE IGUAL -->
 <script>
-let cards = JSON.parse(localStorage.getItem("cards")) || [];
 
-function save() {
-    localStorage.setItem("cards", JSON.stringify(cards));
+const LOGOS = {
+    BBVA: "https://play-lh.googleusercontent.com/bMpPVyW79qGh4hFJGXtPzD2ZreE1L8yrqmqPBZq6ARgw5vaW12L3n5H_vYC4deGG3Q=w240-h480-rw",
+    HSBC: "https://play-lh.googleusercontent.com/zLczkvm012G_NwAd22NwbcUveEklKpQWRhXhwhX_nMN5o2AKPG4VKxaXCETSJ9HnuKc=w240-h480-rw",
+    SANTANDER: "https://play-lh.googleusercontent.com/JlEjMqsRHfbh4zZtMI-b4Np5kSCvh3H7Tiwf4GSUYUPhZ1_LIAwIXomMamKjefYNLp4=w240-h480-rw",
+    NU: "https://play-lh.googleusercontent.com/pdVO2B-EmpJk4qxAT499tcGlVN7V17mGEccPVTb-_A18WsQruKjDKCreASB6IfeE1A=w240-h480-rw",
+    INVEX: "https://play-lh.googleusercontent.com/cVX7hllPWx94kC0dHnzYXmvoWHRdXT46zTahQRwoVft7olF9Ru9bBdUmrjRLbQEhqGI=w240-h480-rw",
+    BANAMEX: "https://play-lh.googleusercontent.com/M-OrtdbJb1UFuyPbwex6-FTowSMfaKcwsE4NYiGTZ0Q6Aef0SqrTOhmVq9JO40rOTJF-=w240-h480-rw"
+};
+
+let cards = JSON.parse(localStorage.getItem("cards")) || [];
+let currentDate = new Date();
+
+function save(){
+    localStorage.setItem("cards",JSON.stringify(cards));
 }
 
-function addCard() {
-    const nameInput = document.getElementById("cardName");
-    const cutDayInput = document.getElementById("cutDay");
+function getLogo(name){
+    let upper = name.toUpperCase();
+    for(let key in LOGOS){
+        if(upper.includes(key)){
+            return LOGOS[key];
+        }
+    }
+    return "";
+}
 
-    const name = nameInput.value;
-    const cutDay = parseInt(cutDayInput.value);
+function addCard(){
+    let name=document.getElementById("cardName").value;
+    let cutDay=parseInt(document.getElementById("cutDay").value);
 
-    if (!name || !cutDay) return alert("Completa campos");
+    if(!name || !cutDay) return alert("Completa datos");
 
     cards.push({
         name,
         cutDay,
-        blocked: false,
-        history: []
+        logo:getLogo(name),
+        history:[],
+        purchaseDays:{},
+        paid:false,
+        lastReset:null
     });
 
-    nameInput.value = "";
-    cutDayInput.value = "";
+    document.getElementById("cardName").value="";
+    document.getElementById("cutDay").value="";
 
     save();
     render();
 }
 
-function render() {
-    const container = document.getElementById("cards");
-    container.innerHTML = "";
-    const today = new Date().getDate();
+function changeMonth(offset){
+    let cont = document.getElementById("cards");
+    cont.style.opacity = 0;
 
-    cards.forEach((card, i) => {
+    setTimeout(()=>{
+        currentDate.setMonth(currentDate.getMonth() + offset);
+        render();
+        cont.style.opacity = 1;
+    },200);
+}
 
-        let total = card.history.reduce((sum, h) => sum + parseFloat(h.amount), 0);
+function render(){
 
-        let daysHTML = "";
-        for (let d = 1; d <= 31; d++) {
-            let cls = "day-btn";
-            if (d === card.cutDay) cls += " cut-day";
-            if (d === today) cls += " today";
-            if (card.blocked && d !== card.cutDay) cls += " disabled";
+    document.getElementById("monthLabel").innerText =
+        currentDate.toLocaleDateString("es-ES",{month:"long",year:"numeric"});
 
-            daysHTML += `<button class="${cls}" onclick="addPurchase(${i})">${d}</button>`;
+    let now=new Date();
+    let today=now.getDate();
+
+    let urgent="", pending="", done="";
+
+    cards.forEach((card,i)=>{
+
+        let total = card.history.reduce((s,h)=>s+parseFloat(h.amount),0);
+
+        let daysToCut = card.cutDay - today;
+        if(daysToCut < 0) daysToCut += 30;
+
+        let isUrgent = daysToCut <= 5 && !card.paid;
+        let reachedLimit = total >= 300;
+        let isDone = reachedLimit && card.paid;
+
+        let alertText = `⏳ Faltan ${daysToCut} día(s) para corte`;
+
+        let html = generateCardHTML(card,i,total,alertText);
+
+        if(isDone) done+=html;
+        else if(isUrgent) urgent+=html;
+        else pending+=html;
+
+    });
+
+    document.getElementById("cards").innerHTML = `
+    <h2>🔴 Urgentes</h2>
+    ${urgent || "Sin tarjetas"}
+
+    <h2>🟡 Pendientes</h2>
+    ${pending || "Sin tarjetas"}
+
+    <h2>🟢 Completadas</h2>
+    ${done || "Sin tarjetas"}
+    `;
+}
+
+function generateCardHTML(card,i,total,alertText){
+
+    let now=new Date();
+    let todayStr=now.toISOString().split("T")[0];
+
+    let year=currentDate.getFullYear();
+    let month=currentDate.getMonth();
+
+    let daysInMonth=new Date(year,month+1,0).getDate();
+    let firstDay=new Date(year,month,1).getDay();
+
+    let dueDate=new Date(year,month,card.cutDay);
+    dueDate.setDate(dueDate.getDate()+20);
+    let dueStr=dueDate.toISOString().split("T")[0];
+
+    let grid="";
+
+    for(let e=0;e<firstDay;e++){
+        grid+=`<div class="empty"></div>`;
+    }
+
+    for(let d=1;d<=daysInMonth;d++){
+
+        let date=new Date(year,month,d);
+        let dateStr=date.toISOString().split("T")[0];
+
+        let cls="day-btn";
+        let hasPurchase = card.purchaseDays[dateStr];
+
+        if(d===card.cutDay) cls+=" cut-day";
+        if(dateStr===todayStr) cls+=" today-blue";
+        if(dateStr===dueStr) cls+=" due-day";
+
+        if(hasPurchase){
+            let c=card.purchaseDays[dateStr];
+            if(c===1) cls+=" purchase-1";
+            else if(c===2) cls+=" purchase-2";
+            else cls+=" purchase-3";
         }
 
-        let historyHTML = card.history.map((h, index) =>
-            `<div>
-                📅 ${h.date} - $${h.amount}<br>
-                ${h.desc}
-                <button onclick="deletePurchase(${i}, ${index})">❌</button>
-            </div>`
-        ).join("");
+        grid+=`<div class="${cls}" onclick="addPurchase(${i},'${dateStr}')">${d}</div>`;
+    }
 
-        let diff = card.cutDay - today;
-        if (diff < 0) diff += 30;
-        let alert = diff <= 3 ? `⚠️ Corte en ${diff} día(s)` : "";
+    let historyHTML = "";
 
-        const div = document.createElement("div");
-        div.className = "card";
-
-        div.innerHTML = `
-            <h3>${card.name}</h3>
-            <p>Corte: ${card.cutDay}</p>
-
-            <div class="days">${daysHTML}</div>
-
-            <div>${card.blocked ? "🔒 Bloqueada" : "✅ Activa"}</div>
-            <div style="color:yellow">${alert}</div>
-
-            <div class="total">Total: $${total.toFixed(2)}</div>
-
-            <div class="actions">
-                <button onclick="editCard(${i})">✏️ Editar</button>
-                <button onclick="resetCard(${i})">🔄 Reset</button>
-                <button class="delete-btn" onclick="deleteCard(${i})">🗑️ Eliminar</button>
-            </div>
-
-            <div class="history">${historyHTML || "Sin compras"}</div>
-        `;
-
-        container.appendChild(div);
-    });
-}
-
-function addPurchase(i) {
-    const card = cards[i];
-    const today = new Date().getDate();
-
-    if (today === card.cutDay) card.blocked = false;
-
-    if (card.blocked) return alert("Tarjeta bloqueada");
-
-    let amount = prompt("Monto:");
-    let desc = prompt("Descripción:");
-
-    if (!amount || !desc) return;
-
-    card.history.unshift({
-        amount,
-        desc,
-        date: new Date().toLocaleDateString()
+    card.history.forEach((h,index)=>{
+        historyHTML += `
+        <div style="display:flex; justify-content:space-between;">
+            <span>${h.date} - $${parseFloat(h.amount).toFixed(2)}</span>
+            <button onclick="deletePurchase(${i},${index})">❌</button>
+        </div>`;
     });
 
-    card.blocked = true;
+    let limitText = total >= 300
+        ? `<span class="limit-ok">✔️ Límite Alcanzado</span>`
+        : `<span class="limit-bad">❌ Límite Pendiente</span>`;
+
+    let paidText = card.paid ? "✔️ Tarjeta Pagada" : "💳 Pago Pendiente";
+
+    return `
+    <div class="card">
+
+    <div class="status-line">${alertText}</div>
+
+    <div class="logo-box">
+        ${card.logo ? `<img src="${card.logo}">` : "💳"}
+    </div>
+
+    <h3>${card.name}</h3>
+
+    <p>F. de Corte: Dia ${card.cutDay} | F. de Pago: ${dueDate.toLocaleDateString()}</p>
+
+    <div class="weekdays">
+    <div>Do</div><div>Lu</div><div>Ma</div>
+    <div>Mi</div><div>Ju</div><div>Vi</div><div>Sa</div>
+    </div>
+
+    <div class="days">${grid}</div>
+
+    <div style="text-align:left;">
+        <strong>🧾 Compras:</strong>
+        ${historyHTML || "Sin movimientos"}
+    </div>
+
+    <div class="status-line">
+    ${limitText} | ${paidText}
+    </div>
+
+    <div class="total-box">
+    💰 Total: $${total.toFixed(2)}
+    </div>
+
+    <button onclick="payCard(${i})">💰 Pagar</button>
+    <button onclick="deleteCard(${i})">🗑️ Eliminar</button>
+
+    </div>
+    `;
+}
+
+function addPurchase(i,dateStr){
+    let amount=parseFloat(prompt("Monto:"));
+    if(isNaN(amount)) return;
+
+    let card=cards[i];
+
+    card.history.push({amount,date:dateStr});
+
+    if(!card.purchaseDays[dateStr]){
+        card.purchaseDays[dateStr]=0;
+    }
+    card.purchaseDays[dateStr]++;
 
     save();
     render();
 }
 
-function deletePurchase(cardIndex, purchaseIndex) {
-    cards[cardIndex].history.splice(purchaseIndex, 1);
+function deletePurchase(cardIndex,purchaseIndex){
+
+    let card=cards[cardIndex];
+    let purchase=card.history[purchaseIndex];
+
+    let date=purchase.date;
+
+    if(card.purchaseDays[date]){
+        card.purchaseDays[date]--;
+        if(card.purchaseDays[date]<=0){
+            delete card.purchaseDays[date];
+        }
+    }
+
+    card.history.splice(purchaseIndex,1);
+
     save();
     render();
 }
 
-function editCard(i) {
-    let newName = prompt("Nuevo nombre:", cards[i].name);
-    let newCut = prompt("Nueva fecha de corte:", cards[i].cutDay);
-
-    if (!newName || !newCut) return;
-
-    cards[i].name = newName;
-    cards[i].cutDay = parseInt(newCut);
-
+function payCard(i){
+    cards[i].paid=true;
     save();
     render();
 }
 
-function deleteCard(i) {
-    if (!confirm("¿Eliminar tarjeta?")) return;
-
-    cards.splice(i, 1);
-    save();
-    render();
-}
-
-function resetCard(i) {
-    if (!confirm("¿Resetear periodo?")) return;
-
-    cards[i].history = [];
-    cards[i].blocked = false;
-
-    save();
-    render();
+function deleteCard(i){
+    if(confirm("¿Eliminar tarjeta?")){
+        cards.splice(i,1);
+        save();
+        render();
+    }
 }
 
 render();
-</script>
 
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js');
-}
 </script>
 
 </body>
