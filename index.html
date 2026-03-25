@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#141e30">
 <title>App Control de Tarjetas</title>
@@ -13,14 +14,29 @@ body {
     background: linear-gradient(135deg, #141e30, #243b55);
     color: white;
     text-align: center;
-    padding: 20px;
+    padding: 10px;
+    margin: 0;
+}
+
+/* Inputs responsive */
+.top-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 15px;
 }
 
 input, button {
-    padding: 8px;
-    margin: 5px;
-    border-radius: 8px;
+    padding: 12px;
+    border-radius: 10px;
     border: none;
+    font-size: 14px;
+}
+
+input {
+    flex: 1;
+    min-width: 120px;
 }
 
 button {
@@ -29,52 +45,68 @@ button {
     font-weight: bold;
 }
 
+/* Cards */
 .cards {
     display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
 }
 
 .card {
     background: rgba(255,255,255,0.1);
     padding: 15px;
     border-radius: 15px;
-    width: 360px;
+    width: 100%;
+    max-width: 420px;
 }
 
+/* Días */
 .days {
     display: grid;
     grid-template-columns: repeat(7,1fr);
-    gap: 4px;
+    gap: 5px;
+    margin-top: 10px;
 }
 
 .day-btn {
-    padding: 5px;
+    padding: 10px 0;
     background: #eee;
     color: black;
-    border-radius: 5px;
-    font-size: 11px;
+    border-radius: 6px;
+    font-size: 12px;
 }
 
 .cut-day { background: red !important; color: white; }
 .today { background: green !important; color: white; }
 .disabled { background: gray !important; color: white; }
 
+/* Historial */
 .history {
-    max-height: 120px;
+    max-height: 150px;
     overflow-y: auto;
     text-align: left;
-    font-size: 12px;
+    font-size: 13px;
     margin-top: 10px;
 }
 
 .total {
-    margin-top: 8px;
+    margin-top: 10px;
     font-weight: bold;
 }
 
+/* Botones acciones */
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
 .actions button {
+    flex: 1;
+    min-width: 90px;
     background: #ff9800;
 }
 
@@ -82,18 +114,34 @@ button {
     background: #e53935 !important;
     color: white;
 }
+
+/* Ajustes extra para pantallas muy pequeñas */
+@media (max-width: 400px) {
+    .day-btn {
+        font-size: 10px;
+        padding: 8px 0;
+    }
+
+    h1 {
+        font-size: 20px;
+    }
+}
 </style>
 </head>
+
 <body>
 
 <h1>💳 App de Tarjetas</h1>
 
-<input id="cardName" placeholder="Nombre tarjeta">
-<input id="cutDay" type="number" placeholder="Corte">
-<button onclick="addCard()">Agregar</button>
+<div class="top-controls">
+    <input id="cardName" placeholder="Nombre tarjeta">
+    <input id="cutDay" type="number" placeholder="Corte">
+    <button onclick="addCard()">Agregar</button>
+</div>
 
 <div class="cards" id="cards"></div>
 
+<!-- TU JS SE QUEDA EXACTAMENTE IGUAL -->
 <script>
 let cards = JSON.parse(localStorage.getItem("cards")) || [];
 
@@ -246,10 +294,12 @@ function resetCard(i) {
 
 render();
 </script>
+
 <script>
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js');
 }
 </script>
+
 </body>
 </html>
